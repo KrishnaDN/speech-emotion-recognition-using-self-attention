@@ -28,6 +28,7 @@ class SpeechDataGenerator():
         audio_link =self.audio_links[idx]
         emo_id = self.labels_emotion[idx]
         gen_id = self.labels_gender[idx]
-        specgram = utils.load_data(audio_link)
-        sample = {'spec': torch.from_numpy(np.ascontiguousarray(specgram)), 'labels_emo': torch.from_numpy(np.ascontiguousarray(emo_id)),'labels_gen': torch.from_numpy(np.ascontiguousarray(gen_id))}
+        specgram, lens = utils.load_data(audio_link)
+        sample = {'spec': torch.from_numpy(np.ascontiguousarray(specgram)), 'labels_emo': torch.from_numpy(np.ascontiguousarray(emo_id)),'labels_gen': torch.from_numpy(np.ascontiguousarray(gen_id)),
+                  'lengths':torch.from_numpy(np.ascontiguousarray(lens))}
         return sample
