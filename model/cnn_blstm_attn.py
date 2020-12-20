@@ -77,9 +77,7 @@ class AudioStream(nn.Module):
         
 
     def forward(self, input_var, input_lengths=None):
-        
         output_lengths = self.get_seq_lens(input_lengths)
-
         x = input_var # (B,1,D,T)
         x, _ = self.conv(x, output_lengths) # (B, C, D, T)
         x_size = x.size()
@@ -91,9 +89,9 @@ class AudioStream(nn.Module):
         x, _ = nn.utils.rnn.pad_packed_sequence(x)
         
         x = x.transpose(0, 1) # (B, T, D)
-        out = self.self_attn_layer(x)
-        mu = torch.mean(out, dim=1)
-        std = torch.std(out, dim=1)
+        #out = self.self_attn_layer(x)
+        mu = torch.mean(x, dim=1)
+        std = torch.std(x, dim=1)
         pooled = torch.cat((mu,std),dim=1)
         gen_pred = self.gender_layer(pooled)
         emo_pred = self.emotion_layer(pooled)

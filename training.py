@@ -27,8 +27,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 ########## Argument parser
 parser = argparse.ArgumentParser(add_help=False)
 
-parser.add_argument('-training_filepath',type=str,default='meta/training.txt')
-parser.add_argument('-testing_filepath',type=str, default='meta/testing.txt')
+parser.add_argument('-training_filepath',type=str,default='meta/training_s1_s2_s3_s4.txt')
+parser.add_argument('-testing_filepath',type=str, default='meta/testing_s5.txt')
 parser.add_argument('-input_spec_size', action="store_true", default=384)
 parser.add_argument('-cnn_filter_size', action="store_true", default=64)
 parser.add_argument('-num_layers_lstm', action="store_true", default=2)
@@ -36,7 +36,7 @@ parser.add_argument('-num_heads_self_attn', action="store_true", default=8)
 parser.add_argument('-lstm_hidden_size', action="store_true", default=128)
 parser.add_argument('-num_emo_classes', action="store_true", default=4)
 parser.add_argument('-num_gender_class', action="store_true", default=2)
-parser.add_argument('-batch_size', action="store_true", default=100)
+parser.add_argument('-batch_size', action="store_true", default=32)
 parser.add_argument('-use_gpu', action="store_true", default=True)
 parser.add_argument('-num_epochs', action="store_true", default=100)
 parser.add_argument('-alpha', action="store_true", default=1.0)
@@ -46,10 +46,10 @@ parser.add_argument('-beta', action="store_true", default=0.25)
 args = parser.parse_args()
 ### Data loaders
 dataset_train = SpeechDataGenerator(manifest=args.training_filepath,mode='train')
-dataloader_train = DataLoader(dataset_train, batch_size=args.batch_size, shuffle=True,collate_fn=speech_collate) 
+dataloader_train = DataLoader(dataset_train, batch_size=args.batch_size,num_workers=16, shuffle=True,collate_fn=speech_collate) 
 
 dataset_test = SpeechDataGenerator(manifest=args.testing_filepath,mode='test')
-dataloader_test = DataLoader(dataset_test, batch_size=args.batch_size,collate_fn=speech_collate)
+dataloader_test = DataLoader(dataset_test, batch_size=args.batch_size,num_workers=16, collate_fn=speech_collate)
 ## Model related
 if args.use_gpu:
     use_cuda = torch.cuda.is_available()
@@ -59,10 +59,9 @@ else:
 
 model = AudioStream(args.input_spec_size, args.cnn_filter_size, args.lstm_hidden_size,args.num_layers_lstm)
 model = model.to(device) 
-#model.load_state_dict(torch.load('model_checkpoints/check_point_old')['model'])
 optimizer = optim.Adam(model.parameters(), lr=0.001, weight_decay=1e-05, betas=(0.9, 0.98), eps=1e-9)
 loss = nn.CrossEntropyLoss()
-scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.3, verbose=True)
+scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=3, factor=0.1, verbose=True)
 
 ################################
 all_acc_nums_class_specific = {}
@@ -73,6 +72,7 @@ for epoch in range(args.num_epochs):
     train_acc_list_gen =[]
     train_loss_list=[]
     for i_batch, sample_batched in enumerate(dataloader_train):
+    
         features = torch.from_numpy(np.asarray([torch_tensor.numpy() for torch_tensor in sample_batched[0]]))
         labels_emo = torch.from_numpy(np.asarray([torch_tensor.numpy() for torch_tensor in sample_batched[1]])) 
         labels_gen = torch.from_numpy(np.asarray([torch_tensor.numpy() for torch_tensor in sample_batched[2]])) 
@@ -82,7 +82,7 @@ for epoch in range(args.num_epochs):
         features, labels_emo, labels_gen, lengths = features.to(device,dtype=torch.float), labels_emo.to(device), labels_gen.to(device), lengths.to(device)
         features.requires_grad = True
         optimizer.zero_grad()
-        preds_emo, pred_gender = model(features.unsqueeze(1), lengths)
+        preds_emo, pred_gender = model(features.unsqueeze(1), lengths.cpu()) ## only for torch 1.7 and above
         emotion_loss = loss(preds_emo,labels_emo.squeeze())
         gender_loss = loss( pred_gender,labels_gen.squeeze())
         total_loss = args.alpha*emotion_loss+args.beta*gender_loss
@@ -138,7 +138,7 @@ for epoch in range(args.num_epochs):
             features, labels_emo, labels_gen, lengths = features.to(device,dtype=torch.float), labels_emo.to(device), labels_gen.to(device), lengths.to(device)
             features.requires_grad = True
             optimizer.zero_grad()
-            preds_emo, pred_gender = model(features.unsqueeze(1), lengths)
+            preds_emo, pred_gender = model(features.unsqueeze(1), lengths.cpu())
             emotion_loss = loss(preds_emo,labels_emo.squeeze())
             gender_loss = loss( pred_gender,labels_gen.squeeze())
             total_loss = args.alpha*emotion_loss+args.beta*gender_loss

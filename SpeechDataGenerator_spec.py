@@ -16,19 +16,19 @@ class SpeechDataGenerator():
         """
         Read the textfile and get the paths
         """
-        self.audio_links = [line.rstrip('\n').split(' ')[0] for line in open(manifest)]
-        self.labels_emotion = [int(line.rstrip('\n').split(' ')[1]) for line in open(manifest)]
-        self.labels_gender = [int(line.rstrip('\n').split(' ')[2]) for line in open(manifest)]
+        self.npy_links = [line.rstrip('\n').split(' ')[0] for line in open(manifest)]
         
 
     def __len__(self):
-        return len(self.audio_links)
+        return len(self.npy_links)
 
     def __getitem__(self, idx):
-        audio_link =self.audio_links[idx]
-        emo_id = self.labels_emotion[idx]
-        gen_id = self.labels_gender[idx]
-        specgram, lens = utils.load_data(audio_link)
+        data = np.load(self.npy_links[idx])
+        audio_data = data['audio_data']
+        audio_data = audio_data/np.max(audio_data)
+        emo_id = data['emo_label']
+        gen_id = data['gen_label']
+        specgram, lens = utils.load_data(audio_data)
         sample = {'spec': torch.from_numpy(np.ascontiguousarray(specgram)), 'labels_emo': torch.from_numpy(np.ascontiguousarray(emo_id)),'labels_gen': torch.from_numpy(np.ascontiguousarray(gen_id)),
                   'lengths':torch.from_numpy(np.ascontiguousarray(lens))}
         return sample

@@ -5,8 +5,8 @@ import torch
 # ===============================================
 #       code from Arsha for loading data.
 # ===============================================
-def load_wav(audio_filepath, sr, win_length=160000,mode='train'):
-    audio_data,fs  = librosa.load(audio_filepath,sr=16000)
+def load_wav(audio_data, sr, win_length=160000,mode='train'):
+    #audio_data,fs  = librosa.load(audio_filepath,sr=16000)
     lens = len(audio_data)
     if len(audio_data)<win_length:
         diff = win_length-len(audio_data)
@@ -30,8 +30,8 @@ def mel_spec_from_wav(wav, hop_length, win_length, n_mels=128):
     
 
 
-def load_data(path, seg_length=160000, win_length=800, sr=16000, hop_length=400, n_fft=1024, spec_len=400, mode='train'):
-    wav,lens = load_wav(path, sr=sr, mode=mode)
+def load_data(audio_data, seg_length=160000, win_length=800, sr=16000, hop_length=400, n_fft=1024, spec_len=400, mode='train'):
+    wav,lens = load_wav(audio_data, sr=sr, mode=mode)
     linear_spect = mel_spec_from_wav(wav, hop_length, win_length, n_mels=128)
     mag, _ = librosa.magphase(linear_spect)  # magnitude
     mag_T = mag.T
